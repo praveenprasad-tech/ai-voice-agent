@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Voice Agent</title>
+    <style>
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            width: 400px;
+        }
+        h1 { color: #fff; }
+        button {
+            background: #7c4dff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover { background: #651fff; }
+        #status { color: #aaa; margin-top: 15px; }
+        #transcription { color: #7c4dff; margin-top: 10px; }
+        #response { color: #fff; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ AI Voice Agent</h1>
+        <button id="btn" onclick="toggleRecording()">🎤 Start Recording</button>
+        <p id="status">Click to speak...</p>
+        <p id="transcription"></p>
+        <p id="response"></p>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let recording = false;
+
+        async function toggleRecording() {
+            if (!recording) {
+                let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.start();
+                recording = true;
+                document.getElementById("btn").innerText = "⏹ Stop Recording";
+                document.getElementById("status").innerText = "Recording...";
+                audioChunks = [];
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            } else {
+                mediaRecorder.stop();
+                recording = false;
+                document.getElementById("btn").innerText = "🎤 Start Recording";
+                document.getElementById("status").innerText = "Processing...";
+                mediaRecorder.onstop = async () => {
+                    let blob = new Blob(audioChunks, { type: "audio/wav" });
+                    let formData = new FormData();
+                    formData.append("audio", blob, "recording.wav");
+                    let res = await fetch("/chat", { method: "POST", body: formData });
+                    let data = await res.json();
+                    document.getElementById("transcription").innerText = "You: " + data.transcription;
+                    document.getElementById("response").innerText = "AI: " + data.response;
+                    if (data.audio_url) {
+                        let audio = new Audio(data.audio_url);
+                        audio.play();
+                    }
+                    document.getElementById("status").innerText = "Click to speak...";
+                };
+            }
+        }
+    </script>
+</body>
+</html>
