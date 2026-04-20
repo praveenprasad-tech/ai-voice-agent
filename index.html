@@ -88,6 +88,13 @@
             border-bottom-left-radius: 4px;
             border: 1px solid rgba(255,255,255,0.06);
         }
+        .bubble.error {
+            background: #2e1a1a;
+            color: #ff6b6b;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
         .bubble .label {
             font-size: 0.68rem;
             opacity: 0.6;
@@ -135,6 +142,11 @@
         #status {
             color: #7b7a99;
             font-size: 0.8rem;
+            min-height: 18px;
+        }
+
+        #status.error {
+            color: #ff6b6b;
         }
 
         #btn {
@@ -148,7 +160,11 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 20px rgba(124,77,255,0.4);
         }
-        #btn:hover { transform: scale(1.08); }
+        #btn:hover:not(:disabled) { transform: scale(1.08); }
+        #btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
         #btn.recording {
             background: linear-gradient(135deg, #ff5f5f, #ff8a65);
             animation: recordPulse 1s infinite;
@@ -157,25 +173,108 @@
             0%, 100% { box-shadow: 0 4px 20px rgba(255,95,95,0.4); }
             50%       { box-shadow: 0 4px 40px rgba(255,95,95,0.8); }
         }
+        #btn.processing {
+            background: linear-gradient(135deg, #7c4dff, #f06292);
+            animation: processingPulse 1.5s infinite;
+        }
+        @keyframes processingPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+        }
 
-        /* Toast Notification */
+        /* Day 5: Waveform Animation (while recording) */
+        .waveform {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            justify-content: center;
+            height: 24px;
+        }
+        .waveform-bar {
+            width: 3px;
+            height: 8px;
+            background: linear-gradient(180deg, #7c4dff, #f06292);
+            border-radius: 2px;
+            animation: wave 0.6s ease-in-out infinite;
+        }
+        .waveform-bar:nth-child(1) { animation-delay: 0s; }
+        .waveform-bar:nth-child(2) { animation-delay: 0.1s; }
+        .waveform-bar:nth-child(3) { animation-delay: 0.2s; }
+        .waveform-bar:nth-child(4) { animation-delay: 0.3s; }
+        .waveform-bar:nth-child(5) { animation-delay: 0.4s; }
+        @keyframes wave {
+            0%, 100% { height: 8px; }
+            50% { height: 16px; }
+        }
+
+        /* Day 5: Spinner Animation (while processing) */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(124, 77, 255, 0.2);
+            border-top-color: #7c4dff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Day 5: Button loading state */
+        #btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* Smooth transitions for button */
+        #btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Toast Notification — Day 4 Enhanced */
         #toast {
             position: fixed;
             bottom: 30px; right: 30px;
-            background: #e74c3c;
             color: white;
-            padding: 12px 20px;
-            border-radius: 10px;
+            padding: 14px 20px;
+            border-radius: 12px;
             font-size: 0.85rem;
             display: none;
             z-index: 999;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
+            max-width: 300px;
+            word-break: break-word;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        #toast.success {
+            background: #27ae60;
+        }
+        #toast.error {
+            background: #e74c3c;
+        }
+        #toast.info {
+            background: #3498db;
+        }
+        #toast.warning {
+            background: #f39c12;
         }
     </style>
 </head>
 <body>
 
-<!-- ✅ Toast body ke andar hai ab -->
+<!-- Day 4: Enhanced Toast -->
 <div id="toast"></div>
 
 <div class="container">
@@ -213,19 +312,32 @@
     let recording = false;
     const sessionId = Math.random().toString(36).substring(2);
 
-    // ✅ Day 4: Toast function add kiya
-    function showToast(msg) {
+    // ── Day 4: Enhanced Toast Function ────────────────
+    function showToast(msg, type = "error") {
         const t = document.getElementById("toast");
         t.textContent = msg;
+        t.className = type; // 'success', 'error', 'info', 'warning'
         t.style.display = "block";
-        setTimeout(() => t.style.display = "none", 3000);
+        
+        setTimeout(() => {
+            t.style.display = "none";
+        }, 4000);
+    }
+
+    // ── Log function for debugging ────────────────────
+    function log(step, msg, type = "info") {
+        const timestamp = new Date().toLocaleTimeString();
+        console.log(`[${timestamp}] ${step}: ${msg}`);
+        // Uncomment to show logs in UI
+        // showToast(`${step}: ${msg}`, type);
     }
 
     function addBubble(role, text) {
         const chatArea = document.getElementById("chatArea");
         const div = document.createElement("div");
+        const roleLabel = role === 'user' ? 'You' : (role === 'error' ? '⚠️ Error' : 'AI');
         div.className = `bubble ${role}`;
-        div.innerHTML = `<div class="label">${role === 'user' ? 'You' : 'AI'}</div>${text}`;
+        div.innerHTML = `<div class="label">${roleLabel}</div>${text}`;
         chatArea.appendChild(div);
         chatArea.scrollTop = chatArea.scrollHeight;
     }
@@ -245,13 +357,48 @@
         if (t) t.remove();
     }
 
+    function setStatus(msg, isError = false) {
+        const status = document.getElementById("status");
+        status.textContent = msg;
+        status.classList.toggle("error", isError);
+    }
+
+    // ── Day 5: Waveform animation while recording ────
+    function showWaveform() {
+        const status = document.getElementById("status");
+        status.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span>🔴 Recording</span>
+                <div class="waveform">
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ── Day 5: Processing spinner ────────────────────
+    function showProcessingSpinner(text) {
+        const status = document.getElementById("status");
+        status.innerHTML = `
+            <div style="display: flex; align-items: center;">
+                <span class="spinner"></span>
+                <span>${text}</span>
+            </div>
+        `;
+    }
+
+    // ── Day 5: Enhanced toggleRecording with animations
     async function toggleRecording() {
         const btn = document.getElementById("btn");
-        const status = document.getElementById("status");
 
         if (!recording) {
-            // ✅ Day 4: Mic permission error handle kiya
+            // ── Start Recording ──────────────────────────
             try {
+                log("MIC", "Requesting microphone access...");
                 let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 mediaRecorder.start();
@@ -259,66 +406,137 @@
                 audioChunks = [];
                 btn.textContent = "⏹";
                 btn.classList.add("recording");
-                status.textContent = "Recording... Click to stop";
+                showWaveform();  // Day 5: Show animated waveform
+                log("MIC", "Recording started");
+                
                 mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
             } catch(err) {
-                showToast("❌ Mic access denied! Please allow microphone.");
+                log("MIC", `Error: ${err.message}`, "error");
+                setStatus("❌ Mic access denied", true);
+                showToast("🎤 Microphone access denied! Please allow microphone in browser settings.", "error");
             }
 
         } else {
+            // ── Stop Recording & Send ────────────────────
             mediaRecorder.stop();
             recording = false;
             btn.textContent = "🎤";
             btn.classList.remove("recording");
-            status.textContent = "Processing...";
-            btn.disabled = true;
+            btn.classList.add("processing");  // Day 5: Add processing animation
+            showProcessingSpinner("Processing...");  // Day 5: Show spinner
+            btn.disabled = true;  // Day 5: Disable button during processing
 
             mediaRecorder.onstop = async () => {
                 let blob = new Blob(audioChunks, { type: "audio/wav" });
+                log("AUDIO", `Blob created: ${blob.size} bytes`);
+                
                 let formData = new FormData();
                 formData.append("audio", blob, "recording.wav");
 
                 addBubble("user", "🎤 Voice message sent...");
                 showTyping();
+                showProcessingSpinner("AI is thinking...");  // Day 5: Thinking spinner
 
                 try {
-                    let res = await fetch(`/chat/${sessionId}`, {
+                    log("API", "Sending request to server...");
+                    
+                    // Day 5: Better async/await pattern
+                    const response = await fetch(`/chat/${sessionId}`, {
                         method: "POST",
                         body: formData
                     });
 
-                    // ✅ Day 4: Server error (4xx/5xx) handle kiya
-                    if (!res.ok) {
-                        const err = await res.json();
-                        throw new Error(err.detail || "Server error");
+                    log("API", `Response status: ${response.status}`);
+
+                    // Check response status
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({ 
+                            detail: `Server error: ${response.status}` 
+                        }));
+                        log("API", `Error: ${errData.detail}`, "error");
+                        throw new Error(errData.detail || `HTTP ${response.status} Error`);
                     }
 
-                    let data = await res.json();
+                    const data = await response.json();
+                    log("API", "Response received successfully");
+
+                    if (!data.success) {
+                        throw new Error(data.detail || "Response not successful");
+                    }
+
                     hideTyping();
+                    setStatus("✅ Done!");
 
                     // Update user bubble with transcription
                     const bubbles = document.querySelectorAll(".bubble.user");
                     bubbles[bubbles.length - 1].innerHTML =
-                        `<div class="label">You</div>${data.transcription}`;
+                        `<div class="label">You</div>${escapeHtml(data.transcription)}`;
 
-                    addBubble("ai", data.response);
+                    addBubble("ai", escapeHtml(data.response));
+                    log("AUDIO", `AI response: ${data.response.substring(0, 50)}...`);
 
+                    // Play audio if available
                     if (data.audio_url) {
-                        new Audio(data.audio_url).play();
+                        log("AUDIO", "Playing TTS audio...");
+                        try {
+                            await new Audio(data.audio_url).play();
+                            showToast("✅ Response ready!", "success");
+                        } catch (audioErr) {
+                            log("AUDIO", `Could not play audio: ${audioErr.message}`, "warning");
+                        }
                     }
 
                 } catch(err) {
                     hideTyping();
-                    // ✅ Day 4: Toast dikhao + bubble dono
-                    showToast("❌ " + (err.message || "Server se connect nahi ho pa raha"));
-                    addBubble("ai", "⚠️ Something went wrong. Please try again.");
+                    log("ERROR", err.message, "error");
+                    
+                    // Show error toast
+                    showToast(`❌ ${err.message}`, "error");
+                    
+                    // Show error in chat
+                    addBubble("error", `Something went wrong:\n\n${err.message}\n\nTry again in a moment.`);
+                    
+                    setStatus("❌ Error occurred", true);
+                    
+                } finally {
+                    // Day 5: Clean up animations
+                    btn.disabled = false;
+                    btn.classList.remove("processing");
+                    if (!recording) {
+                        setStatus("Click mic to speak...");
+                    }
                 }
-
-                btn.disabled = false;
-                status.textContent = "Click mic to speak...";
             };
         }
     }
+
+    // ── Utility: Escape HTML to prevent XSS ──────────
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // ── Health check on load ─────────────────────────
+    window.addEventListener('load', async () => {
+        try {
+            log("HEALTH", "Checking server...");
+            const res = await fetch('/health');
+            if (res.ok) {
+                const health = await res.json();
+                log("HEALTH", `Server OK - Gemini: ${health.gemini}, AssemblyAI: ${health.assemblyai}`);
+                showToast("✅ Server connected", "success");
+            }
+        } catch (err) {
+            log("HEALTH", `Server unreachable: ${err.message}`, "warning");
+            showToast("⚠️ Server not responding - check if FastAPI is running", "warning");
+        }
+    });
 </script>
 </body>
 </html>

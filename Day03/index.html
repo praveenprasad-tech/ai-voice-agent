@@ -40,9 +40,9 @@
             width: 10px; height: 10px;
             background: #43e97b;
             border-radius: 50%;
-            animation: pulse 1.5s infinite;
+            animation: dotPulse 1.5s infinite;
         }
-        @keyframes pulse {
+        @keyframes dotPulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
@@ -137,6 +137,16 @@
             font-size: 0.8rem;
         }
 
+        /* ── DAY 5: btn-wrap — pulse rings bahar dikhne ke liye ── */
+        .btn-wrap {
+            position: relative;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         #btn {
             width: 64px; height: 64px;
             border-radius: 50%;
@@ -147,18 +157,65 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 20px rgba(124,77,255,0.4);
+            position: relative;
+            z-index: 1;
         }
-        #btn:hover { transform: scale(1.08); }
+        #btn:hover:not(:disabled) { transform: scale(1.08); }
+
+        /* ── DAY 5: Recording — red pulse rings ── */
         #btn.recording {
             background: linear-gradient(135deg, #ff5f5f, #ff8a65);
-            animation: recordPulse 1s infinite;
+            box-shadow: 0 4px 20px rgba(255,95,95,0.4);
         }
-        @keyframes recordPulse {
-            0%, 100% { box-shadow: 0 4px 20px rgba(255,95,95,0.4); }
-            50%       { box-shadow: 0 4px 40px rgba(255,95,95,0.8); }
+        #btn.recording::before,
+        #btn.recording::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid #ff5f5f;
+            animation: micPulse 1.4s ease-out infinite;
+        }
+        #btn.recording::after {
+            animation-delay: 0.7s;
+        }
+        @keyframes micPulse {
+            0%   { transform: scale(1);   opacity: 0.9; }
+            100% { transform: scale(2);   opacity: 0;   }
         }
 
-        /* Toast Notification */
+        /* ── DAY 5: Disabled state ── */
+        #btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* ── DAY 5: Spinner ── */
+        .spinner-wrap {
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+        .spinner-wrap.visible {
+            display: flex;
+        }
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.15);
+            border-top-color: #7c4dff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner-wrap span {
+            color: #7b7a99;
+            font-size: 0.78rem;
+        }
+
+        /* Toast */
         #toast {
             position: fixed;
             bottom: 30px; right: 30px;
@@ -175,16 +232,13 @@
 </head>
 <body>
 
-<!-- ✅ Toast body ke andar hai ab -->
 <div id="toast"></div>
 
 <div class="container">
 
     <!-- Header -->
     <div class="header">
-        <div>
-            <div class="dot"></div>
-        </div>
+        <div><div class="dot"></div></div>
         <div>
             <h2>🎙️ AI Voice Agent</h2>
             <p>Powered by Gemini + Murf AI</p>
@@ -202,7 +256,17 @@
     <!-- Controls -->
     <div class="controls">
         <p id="status">Click mic to speak...</p>
-        <button id="btn" onclick="toggleRecording()">🎤</button>
+
+        <!-- DAY 5: Spinner — processing ke time dikhta hai -->
+        <div class="spinner-wrap" id="spinnerWrap">
+            <div class="spinner"></div>
+            <span>Processing...</span>
+        </div>
+
+        <!-- DAY 5: btn-wrap zaroori hai pulse rings ke liye -->
+        <div class="btn-wrap">
+            <button id="btn" onclick="toggleRecording()">🎤</button>
+        </div>
     </div>
 
 </div>
@@ -213,7 +277,7 @@
     let recording = false;
     const sessionId = Math.random().toString(36).substring(2);
 
-    // ✅ Day 4: Toast function add kiya
+    // ✅ Day 4: Toast
     function showToast(msg) {
         const t = document.getElementById("toast");
         t.textContent = msg;
@@ -245,12 +309,19 @@
         if (t) t.remove();
     }
 
+    // ✅ DAY 5: Spinner functions
+    function showSpinner() {
+        document.getElementById("spinnerWrap").classList.add("visible");
+    }
+    function hideSpinner() {
+        document.getElementById("spinnerWrap").classList.remove("visible");
+    }
+
     async function toggleRecording() {
         const btn = document.getElementById("btn");
         const status = document.getElementById("status");
 
         if (!recording) {
-            // ✅ Day 4: Mic permission error handle kiya
             try {
                 let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
@@ -258,7 +329,7 @@
                 recording = true;
                 audioChunks = [];
                 btn.textContent = "⏹";
-                btn.classList.add("recording");
+                btn.classList.add("recording");     // ✅ Day 5: pulse shuru
                 status.textContent = "Recording... Click to stop";
                 mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
             } catch(err) {
@@ -269,9 +340,10 @@
             mediaRecorder.stop();
             recording = false;
             btn.textContent = "🎤";
-            btn.classList.remove("recording");
+            btn.classList.remove("recording");      // ✅ Day 5: pulse band
             status.textContent = "Processing...";
-            btn.disabled = true;
+            btn.disabled = true;                    // ✅ Day 5: button disable
+            showSpinner();                          // ✅ Day 5: spinner on
 
             mediaRecorder.onstop = async () => {
                 let blob = new Blob(audioChunks, { type: "audio/wav" });
@@ -287,7 +359,6 @@
                         body: formData
                     });
 
-                    // ✅ Day 4: Server error (4xx/5xx) handle kiya
                     if (!res.ok) {
                         const err = await res.json();
                         throw new Error(err.detail || "Server error");
@@ -296,7 +367,6 @@
                     let data = await res.json();
                     hideTyping();
 
-                    // Update user bubble with transcription
                     const bubbles = document.querySelectorAll(".bubble.user");
                     bubbles[bubbles.length - 1].innerHTML =
                         `<div class="label">You</div>${data.transcription}`;
@@ -309,12 +379,13 @@
 
                 } catch(err) {
                     hideTyping();
-                    // ✅ Day 4: Toast dikhao + bubble dono
                     showToast("❌ " + (err.message || "Server se connect nahi ho pa raha"));
                     addBubble("ai", "⚠️ Something went wrong. Please try again.");
                 }
 
+                // ✅ Day 5: processing khatam — button enable, spinner off
                 btn.disabled = false;
+                hideSpinner();
                 status.textContent = "Click mic to speak...";
             };
         }
